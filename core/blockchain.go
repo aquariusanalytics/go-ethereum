@@ -1363,7 +1363,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		context = append(context, []interface{}{"ignored", stats.ignored}...)
 	}
 	signer := types.MakeSigner(bc.chainConfig, blockChain[0].Number())
-	rawdb.WriteAllBlocks(bc.rdb, signer, blockChain, receiptChain)
+	rawdb.WriteRDBBlocks(bc.rdb, signer, blockChain, receiptChain)
 	log.Info("Imported new block receipts", context...)
 
 	return 0, nil
@@ -1878,6 +1878,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		// Write the block to the chain and get the status.
 		substart = time.Now()
+		rawdb.WriteRDBBlock(bc.rdb,signer, block, receipts)
 		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {
