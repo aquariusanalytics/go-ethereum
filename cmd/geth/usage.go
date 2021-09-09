@@ -31,6 +31,13 @@ import (
 // AppHelpFlagGroups is the application flags, grouped by functionality.
 var AppHelpFlagGroups = []flags.FlagGroup{
 	{
+		Name: "REDIS",
+		Flags: []cli.Flag{
+			utils.RedisAddrFlag,
+			utils.RedisAuthFlag,
+		},
+	},
+	{
 		Name: "ETHEREUM",
 		Flags: []cli.Flag{
 			configFileFlag,

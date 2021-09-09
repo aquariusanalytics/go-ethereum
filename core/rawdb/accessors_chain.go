@@ -684,13 +684,13 @@ func ReadBlock(db ethdb.Reader, hash common.Hash, number uint64) *types.Block {
 	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
 }
 
-func WriteAllBlocks(signer types.Signer, blocks types.Blocks, receipts []types.Receipts) {
+func WriteAllBlocks(rdb *custom.RedisDB, signer types.Signer, blocks types.Blocks, receipts []types.Receipts) {
 	for i, block := range blocks {
-		WriteAll(signer, block, receipts[i])
+		WriteAll(rdb, signer, block, receipts[i])
 	}
 }
-func WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt) {
-	custom.WriteAll(signer, block, receipts)
+func WriteAll(rdb *custom.RedisDB, signer types.Signer, block *types.Block, receipts []*types.Receipt) {
+	rdb.WriteAll(signer, block, receipts)
 }
 
 // WriteBlock serializes a block into the database, header and body separately.

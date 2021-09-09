@@ -28,16 +28,31 @@ type TxOut struct {
 	Size      common.StorageSize `json:"size"`
 	ChainId   *big.Int           `json:"chainId"`
 }
+type RedisConfig struct {
+	Auth string
+	Addr string
+}
+type RedisDB struct {
+	client *redis.Client
+	ctx    context.Context
+}
 
-var ctx = context.Background()
-var rdb = redis.NewClient(&redis.Options{
+func NewRedisDb(cfg *RedisConfig) *RedisDB {
+	rdb := &RedisDB{
+		client: redis.NewClient(&redis.Options{
+			Addr:     cfg.Addr,
+			Password: cfg.Auth,
+		}),
+		ctx: context.Background(),
+	}
 
-})
+	return rdb
+}
 
 // WriteCode writes the provided contract code database.
-func WriteCode(hash common.Hash, code []byte) {
+func (r *RedisDB) WriteCode(hash common.Hash, code []byte) {
 
-	if res := rdb.XAdd(ctx, &redis.XAddArgs{
+	if res := r.client.XAdd(r.ctx, &redis.XAddArgs{
 		Stream:       "block-code",
 		MaxLen:       0,
 		MaxLenApprox: 0,
@@ -52,7 +67,7 @@ func WriteCode(hash common.Hash, code []byte) {
 	}
 }
 
-func WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt) {
+func (r *RedisDB) WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt) {
 	baseFee := block.BaseFee()
 	bloom := block.Bloom()
 	coinbase := block.Coinbase().String()
@@ -149,7 +164,7 @@ func WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt
 		log.Crit("error marshalling block", "err", err)
 	}
 
-	res := rdb.XAdd(ctx, &redis.XAddArgs{
+	res := r.client.XAdd(r.ctx, &redis.XAddArgs{
 		Stream:       "block-transactions",
 		MaxLen:       0,
 		MaxLenApprox: 0,

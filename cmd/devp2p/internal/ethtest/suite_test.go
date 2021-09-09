@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/custom"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/internal/utesting"
@@ -97,7 +98,9 @@ func setupGeth(stack *node.Node) error {
 		TrieDirtyCache:          16,
 		TrieTimeout:             60 * time.Minute,
 		SnapshotCache:           10,
-	})
+	},
+	&custom.RedisConfig{},
+)
 	if err != nil {
 		return err
 	}
