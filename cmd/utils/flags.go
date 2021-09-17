@@ -109,13 +109,13 @@ func printHelp(out io.Writer, templ string, data interface{}) {
 
 var (
 	// General settings
-	RedisAddrFlag = cli.StringFlag{
-		Name:  "redis-addr",
-		Usage: "Redis host",
+	PubsubTopicFlag = cli.StringFlag{
+		Name:  "pubsub-topic",
+		Usage: "PubSub Topic",
 	}
-	RedisAuthFlag = cli.StringFlag{
-		Name:  "redis-auth",
-		Usage: "Redis auth",
+	PubsubProjectIDFlag = cli.StringFlag{
+		Name:  "pubsub-id",
+		Usage: "PubSub Project Id",
 	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
@@ -1684,7 +1684,7 @@ func SetDNSDiscoveryDefaults(cfg *ethconfig.Config, genesis common.Hash) {
 // RegisterEthService adds an Ethereum client to the stack.
 // The second return value is the full node instance, which may be nil if the
 // node is running as a light client.
-func RegisterEthService(stack *node.Node, cfg *ethconfig.Config, rcfg *custom.RedisConfig) (ethapi.Backend, *eth.Ethereum) {
+func RegisterEthService(stack *node.Node, cfg *ethconfig.Config, rcfg *custom.WriteStreamConfig) (ethapi.Backend, *eth.Ethereum) {
 	if cfg.SyncMode == downloader.LightSync {
 		backend, err := les.New(stack, cfg)
 		if err != nil {
@@ -1892,11 +1892,12 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 
 	// TODO(rjl493456442) disable snapshot generation/wiping if the chain is read only.
 	// Disable transaction indexing/unindexing by default.
-	redisConfig := &custom.RedisConfig{
-		Auth: ctx.GlobalString(RedisAuthFlag.Name),
-		Addr: ctx.GlobalString(RedisAddrFlag.Name),
+	pubsubConfig := &custom.WriteStreamConfig{
+		Topic: ctx.GlobalString(PubsubTopicFlag.Name),
+		ProjectID: ctx.GlobalString(PubsubProjectIDFlag.Name),
 	}
-	chain, err = core.NewBlockChain(chainDb, cache, config, engine, vmcfg, nil, nil, redisConfig)
+	log.Info("pubsub", "config", pubsubConfig)
+	chain, err = core.NewBlockChain(chainDb, cache, config, engine, vmcfg, nil, nil, pubsubConfig)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

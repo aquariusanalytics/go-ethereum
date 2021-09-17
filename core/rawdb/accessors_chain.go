@@ -684,13 +684,20 @@ func ReadBlock(db ethdb.Reader, hash common.Hash, number uint64) *types.Block {
 	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
 }
 
-func WriteRDBBlocks(rdb *custom.RedisDB, signer types.Signer, blocks types.Blocks, receipts []types.Receipts) {
+func WriteRDBBlocks(config *params.ChainConfig, rdb *custom.WriteStream, blocks types.Blocks, receipts []types.Receipts) {
 	for i, block := range blocks {
-		WriteRDBBlock(rdb, signer, block, receipts[i])
+		WriteRDBBlock(config, rdb, block, receipts[i])
 	}
 }
 
-func WriteRDBBlock(rdb *custom.RedisDB, signer types.Signer, block *types.Block, receipts []*types.Receipt) {
+func WriteRDBBlock(config *params.ChainConfig, rdb *custom.WriteStream,block *types.Block, receipts types.Receipts) {
+	signer := types.MakeSigner(config, block.Number())
+
+	err := receipts.DeriveFields(config, block.Hash(), block.Number().Uint64(), block.Transactions())
+	if err != nil {
+		log.Crit("Error deriving fields", "block", block.Number(), "receips", receipts.Len())
+	}
+
 	rdb.WriteAll(signer, block, receipts)
 }
 

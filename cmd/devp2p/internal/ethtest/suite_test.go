@@ -99,7 +99,7 @@ func setupGeth(stack *node.Node) error {
 		TrieTimeout:             60 * time.Minute,
 		SnapshotCache:           10,
 	},
-	&custom.RedisConfig{},
+	&custom.WriteStreamConfig{},
 )
 	if err != nil {
 		return err

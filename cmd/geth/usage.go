@@ -31,10 +31,10 @@ import (
 // AppHelpFlagGroups is the application flags, grouped by functionality.
 var AppHelpFlagGroups = []flags.FlagGroup{
 	{
-		Name: "REDIS",
+		Name: "PUBSUB",
 		Flags: []cli.Flag{
-			utils.RedisAddrFlag,
-			utils.RedisAuthFlag,
+			utils.PubsubTopicFlag,
+			utils.PubsubProjectIDFlag,
 		},
 	},
 	{

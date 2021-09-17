@@ -100,7 +100,7 @@ type Ethereum struct {
 
 // New creates a new Ethereum object (including the
 // initialisation of the common Ethereum object)
-func New(stack *node.Node, config *ethconfig.Config, rcfg *custom.RedisConfig) (*Ethereum, error) {
+func New(stack *node.Node, config *ethconfig.Config, rcfg *custom.WriteStreamConfig) (*Ethereum, error) {
 	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run eth.Ethereum in light sync mode, use les.LightEthereum")

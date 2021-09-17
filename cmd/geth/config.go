@@ -49,7 +49,7 @@ var (
 		Name:        "dumpconfig",
 		Usage:       "Show configuration values",
 		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...), redisFlags...),
+		Flags:       append(append(nodeFlags, rpcFlags...), pubsubFlags...),
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: `The dumpconfig command shows configuration values.`,
 	}
@@ -160,11 +160,11 @@ func makeFullNode(ctx *cli.Context) (*node.Node, ethapi.Backend) {
 	if ctx.GlobalIsSet(utils.OverrideLondonFlag.Name) {
 		cfg.Eth.OverrideLondon = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideLondonFlag.Name))
 	}
-	redisConfig := &custom.RedisConfig{
-		Auth: ctx.GlobalString(utils.RedisAuthFlag.Name),
-		Addr: ctx.GlobalString(utils.RedisAddrFlag.Name),
+	pubsubConfig := &custom.WriteStreamConfig{
+		Topic: ctx.GlobalString(utils.PubsubTopicFlag.Name),
+		ProjectID: ctx.GlobalString(utils.PubsubProjectIDFlag.Name),
 	}
-	backend, eth := utils.RegisterEthService(stack, &cfg.Eth, redisConfig)
+	backend, eth := utils.RegisterEthService(stack, &cfg.Eth, pubsubConfig)
 
 	// Configure catalyst.
 	if ctx.GlobalBool(utils.CatalystFlag.Name) {

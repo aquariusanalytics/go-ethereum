@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/go-redis/redis/v8"
 )
 
 type TxOut struct {
@@ -28,46 +28,39 @@ type TxOut struct {
 	Size      common.StorageSize `json:"size"`
 	ChainId   *big.Int           `json:"chainId"`
 }
-type RedisConfig struct {
-	Auth string
-	Addr string
-}
-type RedisDB struct {
-	client *redis.Client
-	ctx    context.Context
+type WriteStreamConfig struct {
+	Topic     string
+	ProjectID string
 }
 
-func NewRedisDb(cfg *RedisConfig) *RedisDB {
-	rdb := &RedisDB{
-		client: redis.NewClient(&redis.Options{
-			Addr:     cfg.Addr,
-			Password: cfg.Auth,
-		}),
-		ctx: context.Background(),
+type WriteStream struct {
+	ps        *pubsub.Client
+	ctx       context.Context
+	projectID string
+	topic     *pubsub.Topic
+}
+
+func NewWriteStream(cfg *WriteStreamConfig) *WriteStream {
+	projectID := cfg.ProjectID
+	log.Info("newStream", "id", projectID, "topic", cfg.Topic)
+	ctx := context.Background()
+	client, err := pubsub.NewClient(ctx, projectID)
+	t := client.Topic(cfg.Topic)
+
+	if err != nil {
+		log.Error("pubsub.NewClient", "err", err)
+
 	}
-
-	return rdb
-}
-
-// WriteCode writes the provided contract code database.
-func (r *RedisDB) WriteCode(hash common.Hash, code []byte) {
-
-	if res := r.client.XAdd(r.ctx, &redis.XAddArgs{
-		Stream:       "block-code",
-		MaxLen:       0,
-		MaxLenApprox: 0,
-		ID:           "",
-		Values: map[string]interface{}{
-			"hash": hash.String(),
-			"data": code,
-		},
-	}); res.Err() != nil {
-
-		log.Crit("Failed to store contract code", "err", res.Err())
+	pubsub := &WriteStream{
+		projectID: projectID,
+		ps:        client,
+		topic:     t,
+		ctx:       ctx,
 	}
+	return pubsub
 }
 
-func (r *RedisDB) WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt) {
+func (r *WriteStream) WriteAll(signer types.Signer, block *types.Block, receipts []*types.Receipt) {
 	baseFee := block.BaseFee()
 	bloom := block.Bloom()
 	coinbase := block.Coinbase().String()
@@ -164,18 +157,12 @@ func (r *RedisDB) WriteAll(signer types.Signer, block *types.Block, receipts []*
 		log.Crit("error marshalling block", "err", err)
 	}
 
-	res := r.client.XAdd(r.ctx, &redis.XAddArgs{
-		Stream:       "block-transactions",
-		MaxLen:       0,
-		MaxLenApprox: 0,
-		ID:           "",
-		Values: map[string]interface{}{
-			"data": bJson,
-		},
+	result := r.topic.Publish(r.ctx, &pubsub.Message{
+		Data: bJson,
 	})
-	_, resErr := res.Result()
+	_, resErr := result.Get(r.ctx)
 	if resErr != nil {
-		log.Warn("redis error", "err", resErr)
+		log.Error("Get err", "err", resErr)
 	}
 
 }

@@ -143,8 +143,8 @@ var defaultCacheConfig = &CacheConfig{
 	SnapshotLimit:  256,
 	SnapshotWait:   true,
 }
-var defaultRedisConfig = &custom.RedisConfig{
-	Addr: "localhost:3333",
+var defaultWriteStreamConfig = &custom.WriteStreamConfig{
+	ProjectID: "localhost:3333",
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -162,7 +162,7 @@ var defaultRedisConfig = &custom.RedisConfig{
 // included in the canonical one where as GetBlockByNumber always represents the
 // canonical chain.
 type BlockChain struct {
-	rdb         *custom.RedisDB
+	ws         *custom.WriteStream
 	chainConfig *params.ChainConfig // Chain & network configuration
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
@@ -218,12 +218,12 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(block *types.Block) bool, txLookupLimit *uint64, rcfg *custom.RedisConfig) (*BlockChain, error) {
+func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(block *types.Block) bool, txLookupLimit *uint64, wsCfg *custom.WriteStreamConfig) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = defaultCacheConfig
 	}
-	if rcfg == nil {
-		rcfg = defaultRedisConfig
+	if wsCfg == nil {
+		wsCfg = defaultWriteStreamConfig
 	}
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
@@ -233,7 +233,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
 	bc := &BlockChain{
-		rdb:         custom.NewRedisDb(rcfg),
+		ws:         custom.NewWriteStream(wsCfg),
 		chainConfig: chainConfig,
 		cacheConfig: cacheConfig,
 		db:          db,
@@ -1362,8 +1362,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	if stats.ignored > 0 {
 		context = append(context, []interface{}{"ignored", stats.ignored}...)
 	}
-	signer := types.MakeSigner(bc.chainConfig, blockChain[0].Number())
-	rawdb.WriteRDBBlocks(bc.rdb, signer, blockChain, receiptChain)
+
+	rawdb.WriteRDBBlocks(bc.chainConfig, bc.ws, blockChain, receiptChain)
 	log.Info("Imported new block receipts", context...)
 
 	return 0, nil
@@ -1878,7 +1878,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		// Write the block to the chain and get the status.
 		substart = time.Now()
-		rawdb.WriteRDBBlock(bc.rdb,signer, block, receipts)
+		rawdb.WriteRDBBlock(bc.chainConfig, bc.ws, block, receipts)
 		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {

@@ -53,9 +53,9 @@ var (
 	// The app that holds all commands and flags.
 	app = flags.NewApp(gitCommit, gitDate, "the go-ethereum command line interface")
 	// flags that configure the node
-	redisFlags = []cli.Flag{
-		utils.RedisAddrFlag,
-		utils.RedisAuthFlag,
+	pubsubFlags = []cli.Flag{
+		utils.PubsubTopicFlag,
+		utils.PubsubProjectIDFlag,
 	}
 
 	nodeFlags = []cli.Flag{
@@ -244,7 +244,7 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, metricsFlags...)
-	app.Flags = append(app.Flags, redisFlags...)
+	app.Flags = append(app.Flags, pubsubFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		return debug.Setup(ctx)
